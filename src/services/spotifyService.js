@@ -1,7 +1,8 @@
 import Papa from "papaparse";
 
 export const loadSpotifyData = async () => {
-  const response = await fetch("/data/dataset.csv");
+  // Menggunakan BASE_URL agar jalurnya otomatis menyesuaikan saat di laptop maupun di GitHub Pages
+  const response = await fetch(`${import.meta.env.BASE_URL}data/dataset.csv`);
 
   const csvText = await response.text();
 

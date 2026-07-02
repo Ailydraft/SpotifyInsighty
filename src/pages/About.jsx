@@ -38,7 +38,7 @@ function About() {
           </h3>
 
           <p className="text-gray-500 mt-2">
-            NIM: 2404444180009
+            NIM:  240444180009
           </p>
         </div>
 

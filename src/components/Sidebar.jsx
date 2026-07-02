@@ -6,7 +6,7 @@ import {
   Brain,
   ClipboardCheck,
   BookOpen,
-  Database,
+  Crown,
   Info,
 } from "lucide-react";
 
@@ -40,9 +40,9 @@ function Sidebar() {
       icon: BookOpen,
     },
     {
-      name: "Dataset",
-      path: "/dataset",
-      icon: Database,
+      name: "Global Titans",
+      path: "/global-titans",
+      icon: Crown,
     },
     {
       name: "About",
