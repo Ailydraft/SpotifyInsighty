@@ -7,5 +7,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  base: '/Spotify-insight/',
+  base:
+    process.env.VERCEL
+      ? '/'
+      : '/Spotify-insight/',
 })
