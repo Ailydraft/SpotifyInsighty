@@ -5,11 +5,14 @@ import {
   AlertTriangle, HelpCircle, ChevronDown, ChevronUp, BarChart2, CheckCircle2, Zap,
   X, ShieldCheck, AlertCircle
 } from "lucide-react";
+import BootLoader from "../components/BootLoader";
+
 
 function CrispSimulator({ currentStep, setStep }) {
   // ==========================================
   // STATE CUSTOM MODAL (POP-UP)
   // ==========================================
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const [modal, setModal] = useState({
     isOpen: false,
     type: 'warning', // 'warning', 'confirm', 'action'
