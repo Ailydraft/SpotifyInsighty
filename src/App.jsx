@@ -8,20 +8,122 @@ import Evaluation from "./pages/Evaluation";
 import Methodology from "./pages/Methodology";
 import GlobalTitans from "./pages/GlobalTitans";
 import About from "./pages/About";
-import CrispSimulator from "./pages/CrispSimulator"; // Komponen Baru Simulator
+import CrispSimulator from "./pages/CrispSimulator"; 
 
 import Sidebar from "./components/Sidebar";
 import ScrollToTop from "./components/ScrollToTop";
 
 function App() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [appMode, setAppMode] = useState("expert"); 
+  const [simStep, setSimStep] = useState(1); 
+  const [isTransitioning, setIsTransitioning] = useState(false); // 🔥 State untuk Loader Fullscreen Baru
   
-  // STATE UTAMA: Mengatur perpindahan Section/Dashboard
-  const [appMode, setAppMode] = useState("expert"); // Pilihan: 'expert' atau 'simulator'
-  const [simStep, setSimStep] = useState(1); // Mengatur tahapan langkah CRISP-DM (1-6)
+  const [projectData, setProjectData] = useState({
+    title: "",
+    vibe: "",
+    targetMarket: "",
+    manualProblem: "", 
+    fileName: "",
+    fileHeaders: [],
+    totalRows: 0,
+    detectedDomain: "",
+    missingDataCount: 0,
+    uploadedFilesRaw: [], 
+    rawData: [],          
+    cleanedData: []       
+  });
+  
+  const [exitSignal, setExitSignal] = useState(0);
+  const [isPdfDownloaded, setIsPdfDownloaded] = useState(false); // State pelacak unduhan PDF
+
+  // Fungsi Pemicu Loader Transisi saat Kembali ke Dashboard
+  const handleSwitchToDashboard = () => {
+    setIsTransitioning(true);
+    setAppMode("expert");
+    // Loader berjalan selama 1.5 detik (1500ms) untuk efek visual yang pas & enteng
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 1500);
+  };
+
+  // 🔥 CORE ENGINE: Fungsi Cetak PDF Dinamis & Anti-Freeze
+  const triggerDownloadPDF = async () => {
+    const element = document.getElementById("spotify-insight-report"); 
+    
+    if (!element) {
+      console.error("❌ Elemen 'spotify-insight-report' tidak ditemukan!");
+      alert("Gagal mengunduh: Area konten laporan tidak ditemukan di layar.");
+      return;
+    }
+
+    const options = {
+      margin: [10, 10, 10, 10],
+      filename: `Laporan_Spotify_Insights_${projectData.title || "Projek"}.pdf`,
+      image: { type: "jpeg", quality: 0.90 }, 
+      html2canvas: { 
+        scale: 1, 
+        useCORS: true, 
+        logging: false,
+        letterRendering: true,
+        allowTaint: false
+      },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+    };
+
+    try {
+      const html2pdfModule = await import("html2pdf.js");
+      const html2pdf = html2pdfModule.default || html2pdfModule;
+
+      await html2pdf().set(options).from(element).save();
+      setIsPdfDownloaded(true);
+    } catch (error) {
+      console.error("❌ Eror fatal pada Engine PDF:", error);
+      alert("Terjadi kegagalan sistem saat merender PDF. SIlakan cek F12 Console.");
+    }
+  };
 
   return (
     <Router>
+      {/* 🔥 NEW LAYER: FULLSCREEN TRANSITION LOADER (THE "SPOTIFY GLASS NEUMORPHIC") */}
+      {isTransitioning && (
+        <div className="fixed inset-0 bg-white/90 backdrop-blur-2xl z-[99999] flex flex-col items-center justify-center animate-fade-in duration-300">
+          <style>{`
+            @keyframes radarPulse {
+              0% { transform: scale(0.95); opacity: 1; box-shadow: 0 0 0 0 rgba(29, 185, 84, 0.4); }
+              70% { transform: scale(1.1); opacity: 0.5; box-shadow: 0 0 0 40px rgba(29, 185, 84, 0); }
+              100% { transform: scale(0.95); opacity: 1; box-shadow: 0 0 0 0 rgba(29, 185, 84, 0); }
+            }
+            @keyframes spinSlow {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            .radar-core { animation: radarPulse 2s infinite ease-in-out; }
+            .ring-spin { animation: spinSlow 3s infinite linear; }
+          `}</style>
+          
+          <div className="relative flex items-center justify-center mb-8">
+            {/* Ring Orbit Luar (Spinning) */}
+            <div className="ring-spin absolute w-28 h-28 rounded-full border-2 border-dashed border-[#1DB954]/30"></div>
+            
+            {/* Core Pulsing Lingkaran Hijau Neumorphic */}
+            <div className="radar-core w-20 h-20 bg-gradient-to-tr from-[#1DB954] to-emerald-400 rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(29,185,84,0.4)] border border-white/20">
+              <span className="text-3xl filter drop-shadow-md animate-bounce">💼</span>
+            </div>
+          </div>
+
+          {/* Teks Loading yang Elegan */}
+          <div className="text-center space-y-1 px-4">
+            <h3 className="text-base font-black tracking-wider text-gray-800 uppercase">
+              Synchronizing Analytics Core
+            </h3>
+            <p className="text-xs font-medium text-gray-400 max-w-xs animate-pulse">
+              Reconfiguring metric engines and predictive variables...
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="min-h-screen bg-[#F5F5F5] flex flex-col justify-between overflow-x-hidden">
         <div>
           {/* NAVBAR ATAS GLOBAL WITH FLOATING MUSIC ENGINE */}
@@ -55,8 +157,6 @@ function App() {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
-              
-              {/* Sisi Kiri: Branding + Hamburger */}
               <div className="flex items-center gap-3 sm:gap-4 group w-full sm:w-auto">
                 <button 
                   onClick={() => setIsMobileOpen(true)}
@@ -75,43 +175,77 @@ function App() {
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
                     <p className="text-[9px] sm:text-[10px] text-green-100/70 font-bold tracking-widest uppercase">
-                      {appMode === "expert" ? "Predictive Analytics System" : "CRISP-DM Interactive Simulator"}
+                      Predictive Analytics System
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Sisi Kanan: NEO-VIBRANT MODE SWITCHER CAPSULE */}
+              {/* MODE SWITCHER NAVBAR KANAN */}
               <div className="flex items-center gap-3 justify-end w-full sm:w-auto">
-                <div className="bg-black/30 backdrop-blur-xl p-1 rounded-2xl border border-white/10 flex items-center gap-1 shadow-inner w-full sm:w-auto justify-center">
+                <div className="bg-black/40 backdrop-blur-2xl p-1.5 rounded-2xl border border-white/10 flex items-center gap-1.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)] w-full sm:w-auto justify-center transition-all">
+                  
+                  {/* TOMBOL 1: SYSTEM DASHBOARD (TRIGGER TRANSITION LOADER) */}
                   <button
-                    onClick={() => setAppMode("expert")}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap ${
-                      appMode === "expert"
-                        ? "bg-white text-[#1DB954] shadow-md scale-100"
-                        : "text-white/70 hover:text-white"
+                    onClick={() => {
+                      if (appMode === "simulator") {
+                        setExitSignal(prev => prev + 1);
+                        handleSwitchToDashboard(); // Trigger loader estetiknya di sini
+                      } else {
+                        setAppMode("expert");
+                      }
+                    }}
+                    className={`group relative px-4 py-2 rounded-xl text-xs font-black transition-all duration-300 flex items-center gap-2 whitespace-nowrap cursor-pointer select-none ${
+                      appMode === "expert" 
+                        ? "bg-white text-[#1DB954] shadow-[0_4px_15px_rgba(255,255,255,0.3)] scale-100 ring-1 ring-black/5" 
+                        : "text-white/60 bg-transparent hover:bg-white/5 hover:text-white hover:scale-[1.03] active:scale-95"
                     }`}
                   >
-                    💼 System Dashboard
+                    <span className={`transition-transform duration-300 inline-block ${appMode === "expert" ? "scale-110" : "group-hover:animate-bounce"}`}>
+                      💼
+                    </span>
+                    <span className="tracking-wide">System Dashboard</span>
+                    {appMode === "expert" && (
+                      <span className="w-1 h-1 rounded-full bg-[#1DB954] animate-pulse"></span>
+                    )}
                   </button>
+
+                  {/* TOMBOL 2: CRISP SIMULATOR */}
                   <button
-                    onClick={() => setAppMode("simulator")}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-300 flex items-center gap-1.5 whitespace-nowrap ${
-                      appMode === "simulator"
-                        ? "bg-gradient-to-r from-emerald-500 to-[#1DB954] text-white shadow-lg ring-1 ring-white/10"
-                        : "text-white/70 hover:text-white"
+                    onClick={() => {
+                      setExitSignal(0); 
+                      setAppMode("simulator");
+                    }}
+                    className={`group relative px-4 py-2 rounded-xl text-xs font-black transition-all duration-300 flex items-center gap-2 whitespace-nowrap cursor-pointer select-none ${
+                      appMode === "simulator" 
+                        ? "bg-gradient-to-r from-emerald-500 via-[#1DB954] to-green-400 text-white shadow-[0_4px_20px_rgba(29,185,84,0.5)] ring-1 ring-white/20 scale-100" 
+                        : "text-white/70 bg-transparent hover:bg-white/5 hover:text-white hover:scale-[1.06] hover:shadow-[0_0_20px_rgba(29,185,84,0.25)] active:scale-95"
                     }`}
                   >
-                    🎮 CRISP Simulator
+                    {appMode !== "simulator" && (
+                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                      </span>
+                    )}
+
+                    <span className={`transition-transform duration-300 inline-block ${appMode === "simulator" ? "animate-pulse" : "group-hover:rotate-12 group-hover:scale-120"}`}>
+                      🎮
+                    </span>
+                    <span className="tracking-wide">CRISP Simulator</span>
+                    
+                    {appMode !== "simulator" && (
+                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-[2px] bg-emerald-400 transition-all duration-300 group-hover:w-1/3" />
+                    )}
                   </button>
+
                 </div>
               </div>
-
             </div>
           </header>
 
+          {/* AREA UTAMA APLIKASI */}
           <div className="flex relative w-full items-start">
-            {/* Mengirim data kendali mode ke Sidebar */}
             <Sidebar 
               isOpen={isMobileOpen} 
               setIsOpen={setIsMobileOpen} 
@@ -120,10 +254,16 @@ function App() {
               setSimStep={setSimStep} 
             />
 
-            {/* AREA MAIN CONTENT KONDISIONAL (Diberi md:ml-64 agar konten bergeser aman ke kanan) */}
-            <main className="flex-1 p-5 md:p-8 min-w-0 w-full overflow-x-hidden md:ml-64">
+            {/* Structural Collapsible Spacer Pembatas Sidebar */}
+            <div 
+              className={`hidden md:block shrink-0 transition-all duration-300 ease-in-out ${
+                appMode === "simulator" ? "w-0" : "w-64"
+              }`}
+            />
+
+            {/* Konten Utama */}
+            <main className="relative p-5 md:p-8 min-w-0 flex-1 overflow-x-hidden transition-all duration-300">
               {appMode === "expert" ? (
-                /* SECTION 1: Navigasi Halaman Sistem Utama */
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/analytics" element={<Analytics />} />
@@ -134,15 +274,24 @@ function App() {
                   <Route path="/about" element={<About />} />
                 </Routes>
               ) : (
-                /* SECTION 2: Interaksi Simulator CRISP-DM Tanpa Pindah Route */
-                <CrispSimulator currentStep={simStep} setStep={setSimStep} />
+                <CrispSimulator 
+                  onBackToDashboard={handleSwitchToDashboard} // 🔥 Dioper juga ke callback balik bawaan simulator
+                  externalExitSignal={exitSignal}
+                  simStep={simStep}
+                  setSimStep={setSimStep}
+                  projectData={projectData}
+                  setProjectData={setProjectData}
+                  triggerDownloadPDF={triggerDownloadPDF}
+                  isPdfDownloaded={isPdfDownloaded}
+                />
               )}
             </main>
           </div>
         </div>
 
-        {/* FOOTER GLOBAL (Diberi md:pl-64 agar posisi teks simetris di tengah dashboard) */}
-        <footer className="text-center py-6 text-gray-500 text-xs sm:text-sm bg-white border-t border-gray-200 md:pl-64">
+        <footer className={`text-center py-6 text-gray-500 text-xs sm:text-sm bg-white border-t border-gray-200 transition-all duration-300 ${
+          appMode === "simulator" ? "md:pl-0" : "md:pl-64"
+        }`}>
           Spotify Popularity Prediction Using C4.5 | Group 4 Data Mining | LP3I Depok 2026
         </footer>
         <ScrollToTop />

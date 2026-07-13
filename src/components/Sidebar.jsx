@@ -1,13 +1,15 @@
 import { Link, useLocation } from "react-router-dom";
 import {
-  Home, BarChart3, Brain, ClipboardCheck, BookOpen, Crown, Info, X,
-  Target, Search, Database, Cpu, CheckCircle2, SlidersHorizontal
+  Home, BarChart3, Brain, ClipboardCheck, BookOpen, Crown, Info, X
 } from "lucide-react";
 
 function Sidebar({ isOpen, setIsOpen, appMode, simStep, setSimStep }) {
   const location = useLocation();
 
-  // Menu untuk Mode Utama (Expert)
+  if (appMode === "simulator" || location.pathname.includes("simulator")) {
+    return null; 
+  }
+
   const expertMenus = [
     { name: "Dashboard", path: "/", icon: Home },
     { name: "Analytics", path: "/analytics", icon: BarChart3 },
@@ -18,18 +20,11 @@ function Sidebar({ isOpen, setIsOpen, appMode, simStep, setSimStep }) {
     { name: "About", path: "/about", icon: Info },
   ];
 
-  // Menu Langkah Kerja untuk Mode CRISP-DM Simulator
-  const simulatorMenus = [
-    { step: 1, name: "01. Business Target", icon: Target },
-    { step: 2, name: "02. Data Understanding", icon: Search },
-    { step: 3, name: "03. Data Preparation", icon: Database },
-    { step: 4, name: "04. C4.5 Modeling", icon: Cpu },
-    { step: 5, name: "05. Model Evaluation", icon: CheckCircle2 },
-    { step: 6, name: "06. Song Finder (Awam)", icon: SlidersHorizontal },
-  ];
+  const simulatorMenus = [];
 
   return (
     <>
+      {/* OVERLAY MOBILE */}
       {isOpen && (
         <div 
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
@@ -37,32 +32,42 @@ function Sidebar({ isOpen, setIsOpen, appMode, simStep, setSimStep }) {
         />
       )}
 
-      {/* FIXED SIDEBAR DESKTOP & MOBILE */}
+      {/* ULTRA CLEAN FLOATING ISLAND SIDEBAR */}
       <aside 
-        className={`fixed inset-y-0 left-0 w-64 h-full bg-white/95 backdrop-blur-xl p-6 flex flex-col justify-between z-50 transition-transform duration-300 ease-in-out shrink-0
+        className={`fixed z-50 flex flex-col justify-between transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] shrink-0
+          /* Layout Mobile */
+          top-0 left-0 h-full w-[280px] p-6 bg-white rounded-r-[2rem] shadow-[20px_0_50px_rgba(0,0,0,0.05)]
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
-          md:fixed md:top-[88px] md:left-0 md:w-64 md:h-[calc(100vh-88px)] md:translate-x-0 md:z-30 md:shadow-[4px_0_24px_rgba(0,0,0,0.02)] md:border-r md:border-gray-100 overflow-y-auto custom-scrollbar bg-white`}
+          
+          /* Layout Desktop (Floating Island Mod) */
+          md:translate-x-0 md:top-[110px] md:left-5 md:w-[240px] md:h-[calc(100vh-140px)] md:rounded-[24px] 
+          md:bg-white/75 md:backdrop-blur-xl md:border md:border-white/60 md:shadow-[0_10px_30px_rgba(0,0,0,0.04)]
+        `}
       >
-        <div>
-          <div className="flex items-center justify-end md:hidden mb-4">
+        {/* Konten Utama Sidebar dengan Trik Sembunyi Scrollbar */}
+        <div className="relative z-10 flex flex-col h-full overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          
+          {/* TOMBOL CLOSE MOBILE */}
+          <div className="flex items-center justify-end md:hidden mb-5">
             <button
               onClick={() => setIsOpen(false)}
-              className="p-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-500 border border-gray-200"
+              className="p-2 rounded-xl bg-gray-50 text-gray-400 hover:text-gray-600 border border-gray-100"
             >
-              <X size={18} />
+              <X size={18} strokeWidth={2.5} />
             </button>
           </div>
 
-          {/* JUDUL MENU DISESUAIKAN BERDASARKAN MODE OPERASI */}
-          <div className="px-3 mb-4">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
-              {appMode === "expert" ? "System Navigation" : "Simulation Stages"}
+          {/* HEADLINE NAVIGATION */}
+          <div className="px-3 mb-5 flex items-center gap-2.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#1DB954] shadow-[0_0_8px_#1DB954]"></span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] block">
+              {appMode === "expert" ? "Navigation" : "Stages"}
             </span>
           </div>
 
-          <nav className="space-y-2">
+          {/* MENU ITEMS */}
+          <nav className="space-y-1.5 flex-1">
             {appMode === "expert" ? (
-              // RENDER JALUR ROUTER BIASA
               expertMenus.map((menu) => {
                 const Icon = menu.icon;
                 const active = location.pathname === menu.path;
@@ -71,17 +76,28 @@ function Sidebar({ isOpen, setIsOpen, appMode, simStep, setSimStep }) {
                     key={menu.path}
                     to={menu.path}
                     onClick={() => setIsOpen(false)}
-                    className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                      active ? "bg-[#1DB954] text-white shadow-md shadow-green-500/20" : "text-gray-500 hover:bg-green-50 hover:text-[#1DB954]"
+                    className={`group relative flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-300 ease-out ${
+                      active 
+                        ? "bg-[#1DB954] text-white shadow-[0_8px_20px_rgba(29,185,84,0.3)] font-bold scale-[1.02]" 
+                        : "text-gray-600 hover:bg-white/90 hover:text-[#1DB954] hover:shadow-sm hover:translate-x-1"
                     }`}
                   >
-                    <Icon size={18} />
-                    <span className="text-sm font-medium">{menu.name}</span>
+                    {/* Indikator Garis Samping Kiri Saat Aktif */}
+                    {active && (
+                      <div className="absolute left-0 w-1 h-5 bg-white rounded-r-full" />
+                    )}
+                    
+                    {/* Icon Animasi Lembut */}
+                    <div className={`transition-transform duration-300 ${active ? "" : "group-hover:scale-110 group-hover:rotate-3"}`}>
+                      <Icon size={18} strokeWidth={active ? 2.5 : 2} />
+                    </div>
+                    
+                    <span className="text-sm tracking-wide">{menu.name}</span>
                   </Link>
                 );
               })
             ) : (
-              // RENDER TOMBOL SIMULATOR STEP (STATE DRIVEN)
+              // SIMULATOR MENUS (Jika ada)
               simulatorMenus.map((menu) => {
                 const Icon = menu.icon;
                 const active = simStep === menu.step;
@@ -92,30 +108,41 @@ function Sidebar({ isOpen, setIsOpen, appMode, simStep, setSimStep }) {
                       setSimStep(menu.step);
                       setIsOpen(false);
                     }}
-                    className={`w-full group flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-300 ${
+                    className={`w-full group relative flex items-center gap-3.5 px-4 py-3 rounded-xl text-left transition-all duration-300 ease-out ${
                       active 
-                        ? "bg-gradient-to-r from-[#1DB954] to-emerald-500 text-white shadow-md shadow-green-500/20 font-bold scale-[1.02]" 
-                        : "text-gray-500 hover:bg-emerald-50 hover:text-[#1DB954]"
+                        ? "bg-gradient-to-r from-[#1DB954] to-emerald-500 text-white shadow-[0_8px_20px_rgba(29,185,84,0.3)] font-bold scale-[1.02]" 
+                        : "text-gray-600 hover:bg-white/90 hover:text-[#1DB954] hover:translate-x-1"
                     }`}
                   >
-                    <Icon size={18} className={active ? "animate-pulse" : ""} />
-                    <span className="text-xs font-semibold tracking-wide">{menu.name}</span>
+                    {active && (
+                      <div className="absolute left-0 w-1 h-5 bg-white rounded-r-full" />
+                    )}
+                    <div className={`transition-transform duration-300 ${active ? "" : "group-hover:scale-110"}`}>
+                      <Icon size={18} strokeWidth={active ? 2.5 : 2} />
+                    </div>
+                    <span className="text-sm tracking-wide">{menu.name}</span>
                   </button>
                 );
               })
             )}
           </nav>
-        </div>
 
-        {/* Kapsul Status Bawah */}
-        <div className="mt-10 p-4 bg-gradient-to-br from-green-50 to-emerald-50/50 rounded-2xl border border-green-100 shadow-sm">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-2 h-2 rounded-full bg-[#1DB954] animate-ping"></div>
-            <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">Active Core</span>
+          {/* FOOTER STATUS KAPSUL */}
+          <div className="pt-4 mt-auto">
+            <div className="p-3.5 bg-white/60 border border-white/80 rounded-xl shadow-inner relative overflow-hidden group">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1DB954] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#1DB954]"></span>
+                </span>
+                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">System Status</span>
+              </div>
+              <p className="text-[11px] text-gray-700 font-semibold truncate">
+                {appMode === "expert" ? "Production Core v1" : `Step ${simStep} / 6`}
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-gray-500 font-medium">
-            {appMode === "expert" ? "Production Dashboard v1" : `Simulating Step ${simStep} / 6`}
-          </p>
+
         </div>
       </aside>
     </>
