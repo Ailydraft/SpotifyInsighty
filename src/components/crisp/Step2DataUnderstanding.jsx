@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { 
   ArrowRight, ArrowLeft, Database, UploadCloud, FileText, 
   Trash2, ChevronDown, ChevronUp, AlertTriangle, Info, Sparkles,
-  Loader2 
+  Loader2, CheckCircle2 
 } from "lucide-react";
 import * as XLSX from "xlsx"; 
 
@@ -45,6 +45,101 @@ function Step2DataUnderstanding({ advanceToNextStep, setStep, projectData, setPr
   const totalMissing = uploadedFiles.reduce((acc, file) => acc + (file.missingCount || 0), 0);
   
   const isDominantMusic = uploadedFiles.some(file => file.domain?.includes("Music"));
+
+  // --- FUNGSI GENERATE DATA DUMMY KLASIFIKASI SPOTIFY (100 BARIS) ---
+  const handleGenerateDummySpotify = (e) => {
+    e.stopPropagation(); // Mencegah trigger click dari container parent dropzone
+    setIsParsing(true);
+    setParsingProgress(10);
+
+    setTimeout(() => {
+      const genres = ['acoustic', 'pop', 'rock', 'hip-hop', 'edm', 'jazz', 'classical'];
+      const artists = ['Gen Hoshino', 'Ben Woodward', 'Ingrid Michaelson;ZAYN', 'Kina Grannis', 'Chord Overstreet'];
+      const albums = ['Comedy', 'Ghost (Acoustic)', 'To Begin Again', 'Hunger', 'Episode'];
+      
+      const dummyRows = [];
+      const totalRowsToGenerate = 100; // Dikunci ke 100 data sesuai permintaan
+
+      for (let i = 0; i < totalRowsToGenerate; i++) {
+        const genre = genres[Math.floor(Math.random() * genres.length)];
+        const artist = artists[Math.floor(Math.random() * artists.length)];
+        const album = albums[Math.floor(Math.random() * albums.length)];
+        
+        // Atribut numerik disesuaikan dengan range data asli Spotify Anda
+        const danceability = Math.floor(Math.random() * 1000); 
+        const energy = Math.floor(Math.random() * 1000); 
+        const tempo = Math.floor(60000 + Math.random() * 120000); 
+        const explicit = Math.random() > 0.8;
+        
+        // Logika scoring buatan untuk mensimulasikan korelasi nilai Popularity (0-100)
+        let popScore = 30; 
+        if (genre === 'pop' || genre === 'hip-hop' || genre === 'edm') popScore += 25;
+        if (danceability > 600) popScore += 15;
+        if (energy > 500) popScore += 10;
+        popScore += Math.floor(Math.random() * 30 - 15);
+        popScore = Math.max(0, Math.min(100, popScore)); 
+
+        // TARGET KLASIFIKASI POHON KEPUTUSAN C4.5
+        let kelasPopularitas = "Rendah";
+        if (popScore >= 70) kelasPopularitas = "Tinggi";
+        else if (popScore >= 40) kelasPopularitas = "Sedang";
+
+        dummyRows.push({
+          Column1: i,
+          track_id: `5SuOik${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+          artists: artist,
+          album_name: album,
+          track_name: `Lagu Spotify Dummy ${i + 1}`,
+          popularity: popScore,
+          duration_ms: Math.floor(140000 + Math.random() * 100000),
+          explicit: explicit ? "True" : "False",
+          danceability: danceability,
+          energy: energy,
+          key: Math.floor(Math.random() * 12),
+          loudness: Math.floor(-20000 + Math.random() * 15000),
+          mode: Math.random() > 0.5 ? 1 : 0,
+          speechiness: Math.floor(Math.random() * 800),
+          acousticness: Math.floor(Math.random() * 900),
+          instrumentalness: parseFloat(Math.random().toFixed(6)),
+          liveness: Math.floor(Math.random() * 800),
+          valence: Math.floor(Math.random() * 900),
+          tempo: tempo,
+          time_signature: Math.random() > 0.8 ? 3 : 4,
+          track_genre: genre,
+          Kelas_Popularitas: kelasPopularitas // Kolom klasifikasi target C4.5
+        });
+      }
+
+      setParsingProgress(100);
+
+      // Skema header lengkap sesuai dengan DATASET_SPOTIFY.xlsx asli + target kelas
+      const headers = [
+        "Column1", "track_id", "artists", "album_name", "track_name", "popularity", 
+        "duration_ms", "explicit", "danceability", "energy", "key", "loudness", 
+        "mode", "speechiness", "acousticness", "instrumentalness", "liveness", 
+        "valence", "tempo", "time_signature", "track_genre", "Kelas_Popularitas"
+      ];
+      
+      const missingColumnsMap = {};
+      headers.forEach(h => { missingColumnsMap[h] = 0; });
+
+      const simulatedFileMeta = {
+        id: `dummy-spotify-${Math.random().toString(36).substring(2, 9)}`,
+        name: "DATASET_SPOTIFY_MOCK_100.xlsx",
+        size: "26.8 KB",
+        rows: dummyRows.length,
+        headers: headers,
+        missingCount: 0,
+        missingMap: missingColumnsMap,
+        domain: "Music/Spotify Atributes",
+        type: "XLSX",
+        extractedRows: dummyRows 
+      };
+
+      setUploadedFiles(prev => [...prev, simulatedFileMeta]);
+      setIsParsing(false);
+    }, 600);
+  };
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -135,7 +230,7 @@ function Step2DataUnderstanding({ advanceToNextStep, setStep, projectData, setPr
               currentLine = endLimit;
               setTimeout(parseCSVChunk, 0);
             } else {
-              const musicKeywords = ["danceability", "energy", "tempo", "loudness", "acousticness", "valence", "track", "artist", "song", "music", "liveness"];
+              const musicKeywords = ["danceability", "energy", "tempo", "loudness", "acousticness", "valence", "track", "artist", "song", "music", "liveness", "popularity"];
               const isMusicDataset = headers.some(h => musicKeywords.includes(h.toLowerCase()));
 
               const newMeta = {
@@ -211,7 +306,7 @@ function Step2DataUnderstanding({ advanceToNextStep, setStep, projectData, setPr
               currentLine = endLimit;
               setTimeout(parseExcelChunk, 0);
             } else {
-              const musicKeywords = ["danceability", "energy", "tempo", "loudness", "acousticness", "valence", "track", "artist", "song", "music", "liveness"];
+              const musicKeywords = ["danceability", "energy", "tempo", "loudness", "acousticness", "valence", "track", "artist", "song", "music", "liveness", "popularity"];
               const isMusicDataset = headers.some(h => musicKeywords.includes(h.toLowerCase()));
 
               const newMeta = {
@@ -276,9 +371,19 @@ function Step2DataUnderstanding({ advanceToNextStep, setStep, projectData, setPr
         </div>
       </div>
 
-      <p className="text-xs text-slate-400 font-semibold px-1 -mt-4 leading-relaxed max-w-2xl animate-in fade-in slide-in-from-bottom-2 duration-500">
-        Unggah berkas riil Anda (<span className="text-teal-600 font-bold">.CSV / .XLSX</span>). Mesin komputasi akan membedah skema struktur data biner secara akurat, mendeteksi jumlah baris, serta memetakan sebaran sel kosong otomatis.
-      </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 -mt-4 px-1">
+        <p className="text-xs text-slate-400 font-semibold leading-relaxed max-w-xl animate-in fade-in slide-in-from-bottom-2 duration-500">
+          Unggah berkas riil Anda (<span className="text-teal-600 font-bold">.CSV / .XLSX</span>). Mesin komputasi akan membedah skema struktur data biner secara akurat, mendeteksi jumlah baris, serta memetakan sebaran sel kosong otomatis.
+        </p>
+        <button
+          onClick={handleGenerateDummySpotify}
+          disabled={isParsing}
+          className="w-full sm:w-auto text-[11px] font-black text-teal-400 bg-slate-900 hover:bg-slate-950 border border-slate-700/60 p-2.5 px-4 rounded-xl shadow-lg hover:shadow-teal-950/20 transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95 group/btn"
+        >
+          <Sparkles size={14} className="text-teal-400 group-hover/btn:animate-spin" />
+          Gunakan Data Simulasi Spotify (100 Baris)
+        </button>
+      </div>
 
       {/* DRAG & DROP INGEST BOX ANIMATIF / LOADING STATE */}
       {isParsing ? (
@@ -319,7 +424,7 @@ function Step2DataUnderstanding({ advanceToNextStep, setStep, projectData, setPr
               ? "bg-teal-500 text-white border-teal-600 scale-125 shadow-lg shadow-teal-500/30" 
               : "bg-white text-slate-400 group-hover:text-teal-500 group-hover:border-teal-200 group-hover:scale-110 group-hover:bg-teal-50 group-hover:shadow-teal-100"
           }`}>
-            <UploadCloud size={28} className={isDragging || isDragging ? "animate-bounce" : "transition-transform duration-300 group-hover:-translate-y-1"} />
+            <UploadCloud size={28} className={isDragging ? "animate-bounce" : "transition-transform duration-300 group-hover:-translate-y-1"} />
           </div>
           
           <span className="text-sm font-black text-slate-800 block uppercase tracking-wide group-hover:text-teal-950 transition-colors duration-300">
@@ -366,7 +471,7 @@ function Step2DataUnderstanding({ advanceToNextStep, setStep, projectData, setPr
                     <div className="flex items-center gap-2 text-[10px] font-semibold text-slate-400">
                       <span>{file.size}</span>
                       <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                      <span className="text-slate-700 font-black bg-slate-100 px-1.5 py-0.5 rounded-md group-hover/card:bg-teal-100 group-hover/card:text-teal-800 transition-colors">{file.rows.toLocaleString('id-ID')} Baris Asli</span>
+                      <span className="text-slate-700 font-black bg-slate-100 px-1.5 py-0.5 rounded-md group-hover/card:bg-teal-100 group-hover/card:text-teal-800 transition-colors">{file.rows.toLocaleString('id-ID')} Baris</span>
                     </div>
                     <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md mt-1.5 inline-block shadow-sm transition-all duration-300 ${
                       file.domain.includes("Music") 

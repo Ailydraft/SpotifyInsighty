@@ -35,6 +35,9 @@ function Step1Business({ advanceToNextStep, projectData, setProjectData }) {
 
   const [isTitleLocked, setIsTitleLocked] = useState(false);
 
+  // --- STATE BARU UNTUK VALIDASI POP-UP REMINDER ---
+  const [validationAlert, setValidationAlert] = useState({ show: false, message: "" });
+
   const [aiAnalysis, setAiAnalysis] = useState(() => {
     if (projectData.title && projectData.title !== DEFAULT_SIMULATOR_TITLE) {
       const isManualMode = projectData.vibe === "Kustomisasi Teks Manual User" || !!projectData.manualProblem;
@@ -104,12 +107,19 @@ function Step1Business({ advanceToNextStep, projectData, setProjectData }) {
   const handleExecuteAnalysis = () => {
     if (isTitleLocked) return;
 
+    // --- MODIFIKASI: MENGGANTI ALERT BAWAAN BROWSER DENGAN CUSTOM MODAL STATE ---
     if (initMode === "SCAN" && (!selectedVibe || !selectedMarket)) {
-      alert("Harap pilih Kriteria Vibe dan Segmentasi Pasar terlebih dahulu!");
+      setValidationAlert({
+        show: true,
+        message: "Harap pilih Kriteria Vibe dan Segmentasi Pasar terlebih dahulu sebelum melakukan generate!"
+      });
       return;
     }
     if (initMode === "MANUAL" && !manualProblem.trim()) {
-      alert("Harap ketik rumusan masalah industri musik terlebih dahulu!");
+      setValidationAlert({
+        show: true,
+        message: "Harap ketik rumusan masalah industri musik terlebih dahulu sebelum memproses analisis!"
+      });
       return;
     }
 
@@ -199,7 +209,7 @@ function Step1Business({ advanceToNextStep, projectData, setProjectData }) {
   return (
     <div className="space-y-8 text-slate-800 antialiased selection:bg-emerald-500/20">
       
-      {/* HEADER TAHAPAN - Added more reactive hover scales and blur effects */}
+      {/* HEADER TAHAPAN */}
       <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 p-6 rounded-[28px] shadow-2xl relative overflow-hidden group border border-slate-800/60 transition-all duration-500 hover:shadow-emerald-900/40 hover:-translate-y-1">
         <div className="absolute -top-10 -right-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-[80px] group-hover:bg-emerald-500/30 group-hover:scale-110 transition-all duration-700 pointer-events-none"></div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-10">
@@ -563,7 +573,38 @@ function Step1Business({ advanceToNextStep, projectData, setProjectData }) {
         </div>
       )}
 
-      {/* MODAL REMINDER DIALOG */}
+      {/* --- RENDER MODAL 1: PORTAL JENDELA REMINDER VALIDASI (YANG BARU) --- */}
+      {validationAlert.show && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in" 
+            onClick={() => setValidationAlert({ show: false, message: "" })}
+          ></div>
+          
+          <div className="bg-white rounded-[28px] max-w-sm w-full p-6 text-center space-y-4 relative z-[100000] border border-slate-100 shadow-2xl transform transition-all duration-300 animate-in fade-in zoom-in-95 ease-out">
+            <div className="w-12 h-12 bg-amber-50 border border-amber-200 text-amber-500 rounded-full flex items-center justify-center mx-auto shadow-sm shadow-amber-500/10">
+              <AlertTriangle size={22} className="animate-pulse" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h4 className="font-black text-slate-900 text-sm uppercase tracking-wider">Aksi Diperlukan!</h4>
+              <p className="text-[11px] text-slate-500 font-bold leading-relaxed">
+                {validationAlert.message}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setValidationAlert({ show: false, message: "" })}
+              className="w-full py-3 bg-slate-950 hover:bg-black text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer uppercase tracking-wider hover:shadow-xl hover:shadow-emerald-950/10"
+            >
+              Oke, Mengerti
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* MODAL 2: PORTAL KONFIRMASI PEMILIHAN JUDUL (BAWAAN SEBELUMNYA) */}
       {showModal && createPortal(
         <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
           <div 
