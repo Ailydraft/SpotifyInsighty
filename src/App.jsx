@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AlertTriangle, LogOut } from "lucide-react";
@@ -21,6 +21,13 @@ function App() {
   const [simStep, setSimStep] = useState(1); 
   const [isTransitioning, setIsTransitioning] = useState(false);
   
+  // 🔥 SOLUSI ANTI DOUBLE REMINDER: Gunakan Ref untuk melacak step paling real-time
+  const simStepRef = useRef(simStep);
+  
+  useEffect(() => {
+    simStepRef.current = simStep;
+  }, [simStep]);
+  
   const [projectData, setProjectData] = useState({
     title: "",
     vibe: "",
@@ -39,10 +46,8 @@ function App() {
   const [exitSignal, setExitSignal] = useState(0);
   const [isPdfDownloaded, setIsPdfDownloaded] = useState(false);
 
-  // 🔥 State untuk Modal Peringatan Keluar
   const [showExitWarning, setShowExitWarning] = useState(false);
 
-  // Fungsi Pemicu Loader Transisi saat Kembali ke Dashboard
   const handleSwitchToDashboard = () => {
     setIsTransitioning(true);
     setAppMode("expert");
@@ -51,9 +56,7 @@ function App() {
     }, 1500);
   };
 
-  // 🔥 Fungsi Konfirmasi Keluar & Reset Data
   const confirmExit = () => {
-    // 1. Reset semua isi projectData
     setProjectData({
       title: "",
       vibe: "",
@@ -68,18 +71,34 @@ function App() {
       rawData: [],          
       cleanedData: []       
     });
-    
-    // 2. Kembalikan langkah simulator ke Step 1
     setSimStep(1);
-    
-    // 3. Tutup Modal
     setShowExitWarning(false);
-    
-    // 4. Jalankan fungsi transisi ke dashboard
     handleSwitchToDashboard();
   };
 
-  // CORE ENGINE: Fungsi Cetak PDF Dinamis
+  const handleNavbarExit = () => {
+    if (appMode === "simulator") {
+      // Menggunakan simStepRef agar tidak kena bug stale closure
+      if (simStepRef.current === 1) {
+        setShowExitWarning(true);
+      } else {
+        setExitSignal(prev => prev + 1);
+      }
+    } else {
+      setAppMode("expert");
+    }
+  };
+
+  const handleSimulatorExit = () => {
+    // Mengecek state asli, jika di step 1 munculkan modal App.jsx
+    // Jika di step 2+, tombol keluar paksa dari CrispSimulator akan langsung jalankan confirmExit() tanpa modal tambahan.
+    if (simStepRef.current === 1) {
+      setShowExitWarning(true);
+    } else {
+      confirmExit();
+    }
+  };
+
   const triggerDownloadPDF = async () => {
     const element = document.getElementById("spotify-insight-report"); 
     
@@ -210,16 +229,8 @@ function App() {
               <div className="flex items-center gap-3 justify-end w-full sm:w-auto">
                 <div className="bg-black/40 backdrop-blur-2xl p-1.5 rounded-2xl border border-white/10 flex items-center gap-1.5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)] w-full sm:w-auto justify-center transition-all">
                   
-                  {/* TOMBOL 1: SYSTEM DASHBOARD */}
                   <button
-                    onClick={() => {
-                      if (appMode === "simulator") {
-                        // 🔥 MODIFIKASI: Munculkan peringatan, jangan langsung pindah
-                        setShowExitWarning(true); 
-                      } else {
-                        setAppMode("expert");
-                      }
-                    }}
+                    onClick={handleNavbarExit}
                     className={`group relative px-4 py-2 rounded-xl text-xs font-black transition-all duration-300 flex items-center gap-2 whitespace-nowrap cursor-pointer select-none ${
                       appMode === "expert" 
                         ? "bg-white text-[#1DB954] shadow-[0_4px_15px_rgba(255,255,255,0.3)] scale-100 ring-1 ring-black/5" 
@@ -235,7 +246,6 @@ function App() {
                     )}
                   </button>
 
-                  {/* TOMBOL 2: CRISP SIMULATOR */}
                   <button
                     onClick={() => {
                       setExitSignal(0); 
@@ -293,7 +303,7 @@ function App() {
                 </Routes>
               ) : (
                 <CrispSimulator 
-                  onBackToDashboard={handleSwitchToDashboard} 
+                  onBackToDashboard={handleSimulatorExit} 
                   externalExitSignal={exitSignal}
                   simStep={simStep}
                   setSimStep={setSimStep}
@@ -315,7 +325,7 @@ function App() {
         <ScrollToTop />
       </div>
 
-      {/* 🔥 MODAL PERINGATAN KELUAR & HAPUS DATA */}
+      {/* MODAL PERINGATAN KELUAR */}
       {showExitWarning && createPortal(
         <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4">
           <div 
